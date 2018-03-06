@@ -164,7 +164,7 @@
   (interactive)
   (when (null limit) (setq limit (point-max)))
   (let (foundp begin end (key-begin 0) (key-end 0) pt)
-    (flet ((store ()
+    (cl-flet ((store ()
              (store-match-data (list begin end key-begin key-end))))
       ;; attempt to find some statics to highlight and store the
       ;; points beginning and ending the region to highlight.  needs
@@ -292,8 +292,6 @@
    '((ats-font-lock-c-code-search (0 font-lock-preprocessor-face t))
      ("\\.<[^>]*>\\." (0 'ats-font-lock-metric-face)) ;; TODO: what does this face do?
      (ats-font-lock-static-search
-      ;; FIXME: This shouldn't apply to the whole of "case+ !xs0 of |".
-      ;; Maybe there is a bug in the static-search function?
       (0 'font-lock-constant-face)
       (1 'font-lock-keyword-face)))
 
@@ -304,6 +302,7 @@
                      1 (cdr x)))
            '(("datatype" . font-lock-type-face)
              ("implement" . font-lock-function-name-face)
+             ("fun" . font-lock-function-name-face)
              ("val" . font-lock-function-name-face)))))
 
 (defvar ats-font-lock-syntactic-keywords
@@ -318,9 +317,9 @@
 (define-derived-mode c/ats2-mode c-mode "C/ATS"
   "Major mode to edit C code embedded in ATS code."
   (unless (local-variable-p 'compile-command)
-    (set (make-local-variable 'compile-command)
-         (let ((file buffer-file-name))
-           (format "patsopt -tc -d %s" file)))
+    (setq-local compile-command
+                (let ((file buffer-file-name))
+                  (format "patsopt -tc -d %s" file)))
     (put 'compile-command 'permanent-local t))
   (setq indent-line-function 'c/ats2-mode-indent-line))
 
@@ -343,21 +342,21 @@
 ;;;###autoload
 (define-derived-mode ats2-mode fundamental-mode "ATS2"
   "Major mode to edit ATS2 source code."
-  (set (make-local-variable 'font-lock-defaults)
-       '(ats-font-lock-keywords nil nil ((?_ . "w") (?= . "_")) nil
-         (font-lock-syntactic-keywords . ats-font-lock-syntactic-keywords)
-         (font-lock-mark-block-function . ats-font-lock-mark-block)))
-  (set (make-local-variable 'comment-start) "(*")
-  (set (make-local-variable 'comment-continue)  " *")
-  (set (make-local-variable 'comment-end) "*)")
+  (setq-local font-lock-defaults
+              '(ats-font-lock-keywords nil nil ((?_ . "w") (?= . "_")) nil
+                                       (font-lock-syntactic-keywords . ats-font-lock-syntactic-keywords)
+                                       (font-lock-mark-block-function . ats-font-lock-mark-block)))
+  (setq-local comment-start "(*")
+  (setq-local comment-continue " *")
+  (setq-local comment-end "*)")
   (setq indent-line-function 'tab-to-tab-stop)
   (setq tab-stop-list (loop for x from 2 upto 120 by 2 collect x))
   (setq indent-tabs-mode nil)
   (local-set-key (kbd "RET") 'newline-and-indent-relative)
   (unless (local-variable-p 'compile-command)
-    (set (make-local-variable 'compile-command)
-         (let ((file buffer-file-name))
-           (format "patsopt -tc -d %s" file)))
+    (setq-local compile-command
+                (let ((file buffer-file-name))
+                  (format "patsopt -tc -d %s" file)))
     (put 'compile-command 'permanent-local t))
   (local-set-key (kbd "C-c C-c") 'compile)
   (cond
@@ -391,6 +390,6 @@
                       (current-column))))
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.\\(d\\|s\\)ats\\'" . ats2-mode))
+(add-to-list 'auto-mode-alist '("\\.[ds]ats\\'" . ats2-mode))
 
 (provide 'ats2-mode)
