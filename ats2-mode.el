@@ -107,15 +107,8 @@
   (let ((st (copy-syntax-table ats2-mode-syntax-table)))
     (modify-syntax-entry ?_ "w" st)
     st))
-    
-;; Font-lock.
 
-(defface ats-font-lock-static-face
-  '(;; (default :inherit font-lock-type-face)
-    (t (:foreground "SkyBlue" :weight normal)))
-  "Face used for static-related parts of code."
-  :group 'ats-font-lock-faces)
-(defvar ats-font-lock-static-face 'ats-font-lock-static-face)
+;; Font-lock.
 
 (defface ats-font-lock-metric-face
   '(;; (default :inherit font-lock-type-face)
@@ -123,20 +116,6 @@
   "Face used for termination metrics."
   :group 'ats-font-lock-faces)
 (defvar ats-font-lock-metric-face 'ats-font-lock-metric-face)
-
-(defface ats-font-lock-keyword-face
-  '(;; (default :inherit font-lock-keyword-face)
-    (t (:foreground "Cyan" :weight normal)))
-  "Face used for keywords."
-  :group 'ats-font-lock-faces)
-(defvar ats-font-lock-keyword-face 'ats-font-lock-keyword-face)
-
-(defface ats-font-lock-c-face
-  '(;; (default :inherit font-lock-comment-face)
-    (t (:foreground "Pink" :weight normal)))
-  "Face used for C code."
-  :group 'ats-font-lock-faces)
-(defvar ats-font-lock-c-face 'ats-font-lock-c-face)
 
 (defun ats-context-free-search (regexp &optional limit)
   "Use inside a parenthesized expression to find a regexp at the same level."
@@ -301,20 +280,31 @@
           (mapcar 'wrap-word-keyword ats-word-keywords)
           (mapcar 'wrap-special-keyword ats-special-keywords)))
 
+(defun ats-rust-re-word (inner) (concat "\\<" inner "\\>"))
+(defun ats-rust-re-grab (inner) (concat "\\(" inner "\\)"))
+(defconst ats-rust-re-ident "[[:word:][:multibyte:]_][[:word:][:multibyte:]_[:digit:]]*")
+(defun ats-rust-re-item-def (itype)
+  (concat (ats-rust-re-word itype) "[[:space:]]+" (ats-rust-re-grab ats-rust-re-ident)))
+
 (defvar ats-font-lock-keywords
+  ;; FIXME: using preprocessor face for C code for now.
   (append
-   '((ats-font-lock-c-code-search (0 'ats-font-lock-c-face t))
-     ;; ("%{[[:print:][:cntrl:]]*%}" (0 'ats-font-lock-c-face))
-                                
-     ;;     ("[^%]\\({[^|}]*|?[^}]*}\\)" (1 'ats-font-lock-static-face))
-     ;;     ("[^']\\(\\[[^]|]*|?[^]]*\\]\\)" (1 'ats-font-lock-static-face))
-     ("\\.<[^>]*>\\." (0 'ats-font-lock-metric-face))
+   '((ats-font-lock-c-code-search (0 font-lock-preprocessor-face t))
+     ("\\.<[^>]*>\\." (0 'ats-font-lock-metric-face)) ;; TODO: what does this face do?
      (ats-font-lock-static-search
-      (0 'ats-font-lock-static-face)
-      (1 'ats-font-lock-keyword-face)))
-   
+      ;; FIXME: This shouldn't apply to the whole of "case+ !xs0 of |".
+      ;; Maybe there is a bug in the static-search function?
+      (0 'font-lock-constant-face)
+      (1 'font-lock-keyword-face)))
+
    (list (list (mapconcat 'identity ats-keywords "\\|")
-               '(0 'ats-font-lock-keyword-face)))))
+               '(0 'font-lock-keyword-face)))
+   (mapcar #'(lambda (x)
+               (list (ats-rust-re-item-def (car x))
+                     1 (cdr x)))
+           '(("datatype" . font-lock-type-face)
+             ("implement" . font-lock-function-name-face)
+             ("val" . font-lock-function-name-face)))))
 
 (defvar ats-font-lock-syntactic-keywords
   '(("(\\(/\\)" (1 ". 1b"))             ; (/ does not start a comment.
