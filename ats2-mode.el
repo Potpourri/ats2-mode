@@ -37,7 +37,7 @@
 (when (not (boundp 'xemacsp))
   (setq xemacsp (boundp 'xemacs-logo)))
 
-(defvar ats-mode-syntax-table
+(defvar ats2-mode-syntax-table
   (let ((st (make-syntax-table)))
     ;; (*..*) for nested comments.
     (modify-syntax-entry ?\( "() 1n" st)
@@ -103,8 +103,8 @@
     (modify-syntax-entry ?\; "." st)
     st))
 
-(defvar ats-mode-font-lock-syntax-table
-  (let ((st (copy-syntax-table ats-mode-syntax-table)))
+(defvar ats2-mode-font-lock-syntax-table
+  (let ((st (copy-syntax-table ats2-mode-syntax-table)))
     (modify-syntax-entry ?_ "w" st)
     st))
     
@@ -325,16 +325,16 @@
      (1 "\"'") (2 "\"'"))
     ))
 
-(define-derived-mode c/ats-mode c-mode "C/ATS"
+(define-derived-mode c/ats2-mode c-mode "C/ATS"
   "Major mode to edit C code embedded in ATS code."
   (unless (local-variable-p 'compile-command)
     (set (make-local-variable 'compile-command)
          (let ((file buffer-file-name))
            (format "patsopt -tc -d %s" file)))
     (put 'compile-command 'permanent-local t))
-  (setq indent-line-function 'c/ats-mode-indent-line))
+  (setq indent-line-function 'c/ats2-mode-indent-line))
 
-(defun c/ats-mode-indent-line (&optional arg)
+(defun c/ats2-mode-indent-line (&optional arg)
   (let (c-start c-end)
     (save-excursion
       (if (re-search-backward "%{[^$]?" 0 t)
@@ -351,7 +351,7 @@
       (c-indent-line arg))))
 
 ;;;###autoload
-(define-derived-mode ats-mode fundamental-mode "ATS2"
+(define-derived-mode ats2-mode fundamental-mode "ATS2"
   "Major mode to edit ATS2 source code."
   (set (make-local-variable 'font-lock-defaults)
        '(ats-font-lock-keywords nil nil ((?_ . "w") (?= . "_")) nil
@@ -401,6 +401,6 @@
                       (current-column))))
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.\\(d\\|s\\)ats\\'" . ats-mode))
+(add-to-list 'auto-mode-alist '("\\.\\(d\\|s\\)ats\\'" . ats2-mode))
 
-(provide 'ats-mode)
+(provide 'ats2-mode)
