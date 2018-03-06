@@ -2,6 +2,7 @@
 
 ;; Copyright (C) 2007  Stefan Monnier
 ;; updated and modified by Matthew Danish <mrd@debian.org> 2008-2013
+;; updated and modified by Varun Gandhi <theindigamer15@gmail.com> 2018
 
 ;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
 ;; Keywords:
@@ -17,17 +18,9 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs; see the file COPYING.  If not, write to
+;; along with this program; see the file COPYING.  If not, write to
 ;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 ;; Boston, MA 02110-1301, USA.
-
-;;; Commentary:
-
-;; Todo:
-;; - font-lock
-;; - imenu
-;; - outline
-;; - indentation
 
 ;;; Code:
 
@@ -37,12 +30,16 @@
 (when (not (boundp 'xemacsp))
   (setq xemacsp (boundp 'xemacs-logo)))
 
+;; Nice explanation on syntax table here.
+;; https://www.emacswiki.org/emacs/EmacsSyntaxTable
+;; TODO: Read through it and make sure everything here makes sense.
 (defvar ats2-mode-syntax-table
   (let ((st (make-syntax-table)))
     ;; (*..*) for nested comments.
     (modify-syntax-entry ?\( "() 1n" st)
     (modify-syntax-entry ?\) ")( 4n" st)
     (modify-syntax-entry ?*  ". 23n" st)
+    ;; TODO: Maybe https://stackoverflow.com/q/25245469/2682729 helps?
     ;; Not sure how to do // for single-line comments.
     ;; The current setting means that (/ and /* start a comment as well :-(
     (modify-syntax-entry ?/  ". 12b" st)
@@ -70,6 +67,7 @@
     (modify-syntax-entry ?\, ". p" st)
     ;; Just a guess for now.
     (modify-syntax-entry ?\\ "\\" st)
+    ;; TODO: Figure out what these comments are about.
     ;; Handle trailing +/-/* in keywords.
     ;; (modify-syntax-entry ?+ "_" st)
     ;; (modify-syntax-entry ?- "_" st)
@@ -78,29 +76,8 @@
     ;; supported by Emacs.  Worse: there are 2 kinds, one where "!$#?" are
     ;; allowed and one where "<>" are allowed instead.  Hongwei, what's that
     ;; all about?
-    (modify-syntax-entry ?% "." st)
-    (modify-syntax-entry ?& "." st)
-    (modify-syntax-entry ?+ "." st)
-    (modify-syntax-entry ?- "." st)
-    (modify-syntax-entry ?. "." st)
-    ;; (modify-syntax-entry ?/ "." st)  ; Already covered above for comments.
-    (modify-syntax-entry ?: "." st)
-    (modify-syntax-entry ?= "." st)
-    ;; (modify-syntax-entry ?@ "." st)  ; Already defined above.
-    (modify-syntax-entry ?~ "." st)
-    ;; (modify-syntax-entry ?` "." st)  ; Already defined above.
-    (modify-syntax-entry ?^ "." st)
-    (modify-syntax-entry ?| "." st)
-    ;; (modify-syntax-entry ?* "." st)  ; Already covered above for comments.
-    (modify-syntax-entry ?< "." st)
-    (modify-syntax-entry ?> "." st)
-    (modify-syntax-entry ?! "." st)
-    ;; (modify-syntax-entry ?$ "." st)  ; Already defined above.
-    ;; (modify-syntax-entry ?# "." st)  ; Already defined above.
-    (modify-syntax-entry ?? "." st)
-    ;; Real punctuation?
-    (modify-syntax-entry ?:  "." st)
-    (modify-syntax-entry ?\; "." st)
+    (dolist (i '(?% ?& ?+ ?- ?. ?: ?= ?~ ?^ ?| ?< ?> ?! ?? ?\;))
+      (modify-syntax-entry i "." st))
     st))
 
 (defvar ats2-mode-font-lock-syntax-table
@@ -275,8 +252,8 @@
 (defun wrap-special-keyword (w)
   (concat "\\" w "\\>"))
 
-(defvar ats-keywords
-  (append (list "\\<\\(s\\)?case\\(+\\|*\\)?\\>")
+(defvar ats-font-lock-keywords
+  (append (list "\\<\\(s\\)?case[\+\*]?\\>")
           (mapcar 'wrap-word-keyword ats-word-keywords)
           (mapcar 'wrap-special-keyword ats-special-keywords)))
 
@@ -295,7 +272,7 @@
       (0 'font-lock-constant-face)
       (1 'font-lock-keyword-face)))
 
-   (list (list (mapconcat 'identity ats-keywords "\\|")
+   (list (list (mapconcat 'identity ats-font-lock-keywords "\\|")
                '(0 'font-lock-keyword-face)))
    (mapcar #'(lambda (x)
                (list (ats-rust-re-item-def (car x))
@@ -303,7 +280,8 @@
            '(("datatype" . font-lock-type-face)
              ("implement" . font-lock-function-name-face)
              ("fun" . font-lock-function-name-face)
-             ("val" . font-lock-function-name-face)))))
+             ("val" . font-lock-function-name-face)
+             ("and" . font-lock-function-name-face)))))
 
 (defvar ats-font-lock-syntactic-keywords
   '(("(\\(/\\)" (1 ". 1b"))             ; (/ does not start a comment.
@@ -340,7 +318,7 @@
       (c-indent-line arg))))
 
 ;;;###autoload
-(define-derived-mode ats2-mode fundamental-mode "ATS2"
+(define-derived-mode ats2-mode prog-mode "ATS2"
   "Major mode to edit ATS2 source code."
   (setq-local font-lock-defaults
               '(ats-font-lock-keywords nil nil ((?_ . "w") (?= . "_")) nil
@@ -358,6 +336,8 @@
                 (let ((file buffer-file-name))
                   (format "patsopt -tc -d %s" file)))
     (put 'compile-command 'permanent-local t))
+  ;; FIXME: This seems like a bad idea. We should replace it with a proper
+  ;; variable so that it can be modified externally.
   (local-set-key (kbd "C-c C-c") 'compile)
   (cond
    ;; Emacs 21
