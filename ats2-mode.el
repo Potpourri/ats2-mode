@@ -39,11 +39,11 @@
     (modify-syntax-entry ?\( "() 1n" st)
     (modify-syntax-entry ?\) ")( 4n" st)
     (modify-syntax-entry ?*  ". 23n" st)
-    ;; TODO: Maybe https://stackoverflow.com/q/25245469/2682729 helps?
-    ;; Not sure how to do // for single-line comments.
-    ;; The current setting means that (/ and /* start a comment as well :-(
-    (modify-syntax-entry ?/  ". 12b" st)
-    (modify-syntax-entry ?\n ">  b" st)
+    ;; C-like end-of-line comments.
+    ;; See https://stackoverflow.com/q/25245469/2682729
+    (modify-syntax-entry ?/  "< 1" st)
+    (modify-syntax-entry ?/  "< 2" st)
+    (modify-syntax-entry ?\n "> " st)
     ;; Strings.
     (modify-syntax-entry ?\" "\"" st)
     ;; Same problem as in Ada: ' starts a char-literal but can appear within
@@ -137,6 +137,7 @@
           (store-match-data (list begin end))
           (point))))))
 
+;; TODO: What does the author mean by "static-search"?
 (defun ats-font-lock-static-search (&optional limit)
   (interactive)
   (when (null limit) (setq limit (point-max)))
@@ -176,6 +177,8 @@
              (t
               (setq pt nil))))
            ;; handle ( ... | ... )
+           ;; FIXME: insert logic here to ignore this when we detect
+           ;; a | due to a case.
            ((looking-at "(")
             (forward-char 1)
             (incf begin)
@@ -257,25 +260,29 @@
           (mapcar 'wrap-word-keyword ats-word-keywords)
           (mapcar 'wrap-special-keyword ats-special-keywords)))
 
-(defun ats-rust-re-word (inner) (concat "\\<" inner "\\>"))
-(defun ats-rust-re-grab (inner) (concat "\\(" inner "\\)"))
-(defconst ats-rust-re-ident "[[:word:][:multibyte:]_][[:word:][:multibyte:]_[:digit:]]*")
-(defun ats-rust-re-item-def (itype)
-  (concat (ats-rust-re-word itype) "[[:space:]]+" (ats-rust-re-grab ats-rust-re-ident)))
+;; FIXME: This shouldn't be a global variable?
+(defvar ats-whitespace-or-newline "[[:space:]\n]+")
+
+;; Stolen from rust-mode.el
+(defun ats-re-word (inner) (concat "\\<" inner "\\>"))
+(defun ats-re-grab (inner) (concat "\\(" inner "\\)"))
+(defconst ats-re-ident "[[:word:][:multibyte:]_][[:word:][:multibyte:]_[:digit:]]*")
+(defun ats-re-item-def (itype)
+  (concat (ats-re-word itype) ats-whitespace-or-newline (ats-re-grab ats-re-ident)))
 
 (defvar ats-font-lock-keywords
   ;; FIXME: using preprocessor face for C code for now.
   (append
    '((ats-font-lock-c-code-search (0 font-lock-preprocessor-face t))
      ("\\.<[^>]*>\\." (0 'ats-font-lock-metric-face)) ;; TODO: what does this face do?
-     (ats-font-lock-static-search
+     (ats-font-lock-static-search ;; this function isn't working correctly.
       (0 'font-lock-constant-face)
       (1 'font-lock-keyword-face)))
 
    (list (list (mapconcat 'identity ats-keywords "\\|")
                '(0 'font-lock-keyword-face)))
    (mapcar #'(lambda (x)
-               (list (ats-rust-re-item-def (car x))
+               (list (ats-re-item-def (car x))
                      1 (cdr x)))
            '(("datatype" . font-lock-type-face)
              ("implement" . font-lock-function-name-face)
