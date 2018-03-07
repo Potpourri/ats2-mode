@@ -252,7 +252,7 @@
 (defun wrap-special-keyword (w)
   (concat "\\" w "\\>"))
 
-(defvar ats-font-lock-keywords
+(defvar ats-keywords
   (append (list "\\<\\(s\\)?case[\+\*]?\\>")
           (mapcar 'wrap-word-keyword ats-word-keywords)
           (mapcar 'wrap-special-keyword ats-special-keywords)))
@@ -272,7 +272,7 @@
       (0 'font-lock-constant-face)
       (1 'font-lock-keyword-face)))
 
-   (list (list (mapconcat 'identity ats-font-lock-keywords "\\|")
+   (list (list (mapconcat 'identity ats-keywords "\\|")
                '(0 'font-lock-keyword-face)))
    (mapcar #'(lambda (x)
                (list (ats-rust-re-item-def (car x))
