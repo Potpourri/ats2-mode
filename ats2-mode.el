@@ -377,6 +377,6 @@
                       (current-column))))
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.[ds]ats\\'" . ats2-mode))
+(add-to-list 'auto-mode-alist '("\\.[dsh]ats\\'" . ats2-mode))
 
 (provide 'ats2-mode)
